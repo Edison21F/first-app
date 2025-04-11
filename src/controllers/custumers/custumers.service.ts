@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateCustumerDto } from './dto/create-custumer.dto';
 import { UpdateCustumerDto } from './dto/update-custumer.dto';
 import { Custumer } from './custumers.interface';
@@ -6,29 +6,10 @@ import { Custumer } from './custumers.interface';
 @Injectable()
 export class CustumersService {
 
-  private custumers:Custumer[]=
-  [
-    {
-      id: 1,
-      name: 'John Doe',
-      age: 30,
-      dateOfBirth: new Date('1993-01-01'),
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      age: 25,
-      dateOfBirth: new Date('1998-05-15'),
-    },
-    {
-      id: 3,
-      name: 'Alice Johnson',
-      age: 28,
-      dateOfBirth: new Date('1995-09-10'),
-    }
-  ]
+  private custumers: Custumer[] = [
     
-  
+  ];
+
   create(createCustumerDto: CreateCustumerDto) {
     const newCustumer: Custumer = {
       id: this.custumers.length + 1,
@@ -39,27 +20,39 @@ export class CustumersService {
   }
 
   findAll() {
+    if(this.custumers.length === 0) {
+      throw new NotFoundException('No se encontraron clientes');
+    }
     return this.custumers;
   }
 
   findOne(id: number) {
-    return this.custumers.find(custumer => custumer.id === id);
+    const custumer = this.custumers.find(custumer => custumer.id === id);
+    if (!custumer) {
+      throw new NotFoundException(`Customer with ID ${id} not found`);
+    }
+    return custumer;
   }
 
   update(id: number, updateCustumerDto: UpdateCustumerDto) {
-    const custumer = this.findOne(id);
-    if (!custumer) {
-      return null; 
-    }
-    const updatedCustumer = { ...custumer, ...updateCustumerDto };
     const index = this.custumers.findIndex(c => c.id === id);
+    if (index === -1) {
+      throw new NotFoundException(`Customer with ID ${id} not found`);
+    }
+    const updatedCustumer = {
+      ...this.custumers[index],
+      ...updateCustumerDto,
+    };
     this.custumers[index] = updatedCustumer;
     return updatedCustumer;
-
   }
 
   remove(id: number) {
-  this.custumers = this.custumers.filter(custumer => custumer.id !== id);
-  return this.custumers;
+    const index = this.custumers.findIndex(c => c.id === id);
+    if (index === -1) {
+      throw new HttpException(`Customer with ID ${id} does not exist`, HttpStatus.NOT_FOUND);
+    }
+    this.custumers.splice(index, 1);
+    return { message: `Customer with ID ${id} has been removed` };
   }
 }
